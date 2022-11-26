@@ -1,3 +1,4 @@
 project/
 *.ipynb
 *.xlsx
+data.csv
