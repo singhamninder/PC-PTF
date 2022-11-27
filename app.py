@@ -5,7 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
 import seaborn as sns
-import os
+from rosetta import Rosetta
 import pickle
 import random
 
@@ -53,16 +53,37 @@ def bag_predict(models, X_test):
     std_vwc = bag_pred.std(axis=1)
     return mean_vwc, std_vwc
 
+def van_genuchten(h, parms):
+    theta_r = parms[0]
+    theta_s = parms[1]
+    alpha = 10**parms[2]
+    neta = 10**parms[3]
+    m = 1-1/neta
+
+    numt = (theta_s- theta_r)
+    Se=(1+abs(alpha*h)**neta)**(m)
+    vwc = theta_r + numt/Se
+    return vwc
+
+rosetta_vwc_df = pd.DataFrame()
 def plot_results(results_df):
-    rand_soil = random.choice(results_df['soil#'].unique())
-    soil_test = results_df[results_df['soil#']==rand_soil]
-        
+    rand_soil = random.choice(results_df['soil#'].unique())   
     sns.set(font_scale=1.5, style="ticks")
     fig, ax = plt.subplots(figsize=(6, 6))
-    # ax.plot(test_F1['pF'], test_F1['VWC'], 'o', alpha=0.6, label = 'VWC')
-    ax.plot(soil_test['pF'], soil_test['mean_vwc'], '-', label = 'PCPTF')
-    ax.fill_between(soil_test['pF'], soil_test['mean_vwc']+soil_test['std_vwc'],
-                    soil_test['mean_vwc']-soil_test['std_vwc'], alpha=0.3)
+    if not rosetta_vwc_df.empty:
+        soil_test = results_df[results_df['soil#']==rand_soil]
+        ax.plot(soil_test['pF'], soil_test['mean_vwc'], '-', label = 'PCPTF')
+        ax.fill_between(soil_test['pF'], soil_test['mean_vwc']+soil_test['std_vwc'],
+                        soil_test['mean_vwc']-soil_test['std_vwc'], alpha=0.3)
+        rosetta_soil = rosetta_vwc_df[rosetta_vwc_df['soil#']==rand_soil]
+        ax.plot(rosetta_soil['pF'], rosetta_soil['rosetta'], '-', label = 'Rosetta3')
+        ax.fill_between(rosetta_soil['pF'], rosetta_soil['std'], rosetta_soil['_std'], alpha=0.3)
+    else:
+        soil_test = results_df[results_df['soil#']==rand_soil]
+        ax.plot(soil_test['pF'], soil_test['mean_vwc'], '-', label = 'PCPTF')
+        ax.fill_between(soil_test['pF'], soil_test['mean_vwc']+soil_test['std_vwc'],
+                        soil_test['mean_vwc']-soil_test['std_vwc'], alpha=0.3)
+
     ax.set_xlim(0,5)
     ax.legend(prop={'size': 14})
     ax.grid(True,linestyle='--')
@@ -82,7 +103,7 @@ def plot_results(results_df):
 st.title('Pseudo-continuous Pedotransfer Functions for estimating Soil Water Retention Curve (SWRC)')
 with st.sidebar:
     st.subheader('Upload your CSV file')
-    uploaded_file = st.file_uploader("Make sure coloumns are named - soil#, clay, silt, sand, bd, and omc", type=["csv"],
+    uploaded_file = st.file_uploader("Make sure columns are named - soil#, clay, silt, sand, bd, and omc", type=["csv"],
                 help='File should atleast have columns - soil#, clay, silt, and sand')
 
     st.markdown('Clay [%],  Silt [%], Sand [%], ' 
@@ -152,6 +173,8 @@ if uploaded_file is not None:
         scaler = pickle.load(open('ann2_stdscaler.pkl', 'rb'))
        
         estimated_vwc = {}
+        ros_dict = {}
+        vg_parms = {}
         for soil, soil_test in test_df.groupby('soil#'):
             X_test = scaler.transform(soil_test.iloc[:,1:])
             mean_vwc, std_vwc = bag_predict(models, X_test)
@@ -161,8 +184,38 @@ if uploaded_file is not None:
                                 .rename({'level_0':'soil#'},axis=1).reset_index(drop=True)
             results_df = pd.concat([test_df, vwc_.iloc[:,1:]],axis=1)
 
+            ##Get van genuchten parameters from Rosetta3 SWRC
+            rosetta_input = np.array(soil_test[['sand','silt','clay']].head(1))
+            rose32 = Rosetta(rosetta_version=3, model_code=2)
+            mean, stdev = rose32.predict(rosetta_input)
+            vg_parms[soil] = pd.DataFrame(mean, columns=['theta_r', 'theta_s',
+                                            'log10(alpha)', 'log10(n)', 'log10(ksat)'])
+            vg_parms_df = pd.concat(vg_parms.values(), keys=vg_parms.keys()) \
+                            .reset_index(level=0) \
+                            .rename({'level_0':'soil#'},axis=1).reset_index(drop=True)
+
+            ## Estimate SWRC using VG parameters
+            h_cm = 10**soil_test['pF']
+            parms = mean[0]
+            rosetta_vwc = [van_genuchten(h=h, parms=parms) for h in h_cm]
+
+            parms = mean[0]-stdev[0]
+            vwc_std = [van_genuchten(h=h, parms=parms) for h in h_cm]
+
+            parms = mean[0]+stdev[0]
+            vwcstd = [van_genuchten(h=h, parms=parms) for h in h_cm]
+        
+            ros_dict[soil] = pd.DataFrame({'pF':soil_test['pF'],'h_cm':h_cm, 'rosetta':rosetta_vwc,
+                                            '_std':vwc_std, 'std':vwcstd})
+
+            rosetta_vwc_df = pd.concat(ros_dict.values(), keys=ros_dict.keys()) \
+                            .reset_index(level=0) \
+                            .rename({'level_0':'soil#'},axis=1).reset_index(drop=True)
+
         st.markdown('**Results for your data**')
-        st.write(results_df)       
+        st.write(results_df)
+        st.markdown('**Van Genuchten parameteres for your soils are:**')
+        st.write(vg_parms_df)
 
     elif model == 'model3':
         st.info(f'{model} uses soil texture(SSC), and bulk density(bd) as inputs')
@@ -175,6 +228,8 @@ if uploaded_file is not None:
         scaler = pickle.load(open('ann3_stdscaler.pkl', 'rb'))
     
         estimated_vwc = {}
+        ros_dict = {}
+        vg_parms = {}
         for soil, soil_test in test_df.groupby('soil#'):
             X_test = scaler.transform(soil_test.iloc[:,1:])
             mean_vwc, std_vwc = bag_predict(models, X_test)
@@ -184,11 +239,41 @@ if uploaded_file is not None:
                                 .rename({'level_0':'soil#'},axis=1).reset_index(drop=True)
             results_df = pd.concat([test_df, vwc_.iloc[:,1:]],axis=1)
 
+            ##Get van genuchten parameters from Rosetta3 SWRC
+            rosetta_input = np.array(soil_test[['sand','silt','clay', 'bd']].head(1))
+            rose33 = Rosetta(rosetta_version=3, model_code=3)
+            mean, stdev = rose33.predict(rosetta_input)
+            vg_parms[soil] = pd.DataFrame(mean, columns=['theta_r', 'theta_s',
+                                            'log10(alpha)', 'log10(n)', 'log10(ksat)'])
+            vg_parms_df = pd.concat(vg_parms.values(), keys=vg_parms.keys()) \
+                            .reset_index(level=0) \
+                            .rename({'level_0':'soil#'},axis=1).reset_index(drop=True)
+
+            ## Estimate SWRC using VG parameters
+            h_cm = 10**soil_test['pF']
+            parms = mean[0]
+            rosetta_vwc = [van_genuchten(h=h, parms=parms) for h in h_cm]
+
+            parms = mean[0]-stdev[0]
+            vwc_std = [van_genuchten(h=h, parms=parms) for h in h_cm]
+
+            parms = mean[0]+stdev[0]
+            vwcstd = [van_genuchten(h=h, parms=parms) for h in h_cm]
+        
+            ros_dict[soil] = pd.DataFrame({'pF':soil_test['pF'],'h_cm':h_cm, 'rosetta':rosetta_vwc,
+                                            '_std':vwc_std, 'std':vwcstd})
+
+            rosetta_vwc_df = pd.concat(ros_dict.values(), keys=ros_dict.keys()) \
+                            .reset_index(level=0) \
+                            .rename({'level_0':'soil#'},axis=1).reset_index(drop=True)
+
         st.markdown('**Results for your data**')
         st.write(results_df)
+        st.markdown('**Van Genuchten parameteres for your soils are:**')
+        st.write(vg_parms_df)
 
     elif model == 'model4':
-        st.info(f'{model} uses soil texture(SSC), and bulk density(bd) as inputs')
+        st.info(f'{model} uses soil texture(SSC), and organic matter content(omc) as inputs')
         models = ['model4/ann_'+ str(i) + '.h5' for i in range(100)]
         ## generate the test dataset for the model
         colList = ['soil#', 'clay', 'silt', 'sand', 'omc']
