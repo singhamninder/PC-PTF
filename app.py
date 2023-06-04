@@ -1,4 +1,5 @@
 from utils import *
+rosetta_vwc_df = pd.DataFrame()
 
 st.title('Pseudo-continuous Pedotransfer Functions for estimating Soil Water Retention Curve (SWRC)')
 with st.sidebar:
