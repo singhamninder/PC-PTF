@@ -202,7 +202,7 @@ if uploaded_file is not None:
 
     st.subheader('Plot Results')
     if st.button('Plot random soil', help='SWRC for a random soil from your dataset will be created at each click of this button'):
-        fig = plot_results(results_df)
+        fig = plot_results(results_df, rosetta_vwc_df)
         st.pyplot(fig)
         st.markdown("***pF***: the logarithmic transformation of soil tension in ***cm*** of water")
 
