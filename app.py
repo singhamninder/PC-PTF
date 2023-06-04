@@ -38,8 +38,6 @@ if uploaded_file is not None:
 ## MODEL FITTING
     st.header('Fit the Model')
     model = st. selectbox('Select model', choices)
-    
-    rosetta_vwc_df = pd.DataFrame()
 
     if model == 'model1':
         st.info(f'{model} uses soil texture(SSC), bulk density(BD), and soil organic matter (omc) as inputs')
@@ -60,6 +58,8 @@ if uploaded_file is not None:
                                 .reset_index(level=0) \
                                 .rename({'level_0':'soil#'},axis=1).reset_index(drop=True)
             results_df = pd.concat([test_df, vwc_.iloc[:,1:]],axis=1)
+            ##create empty dataframe for rosetta 
+            rosetta_vwc_df = pd.DataFrame()
 
         st.markdown('**Results for your data**')
         st.write(results_df)
@@ -193,6 +193,8 @@ if uploaded_file is not None:
                                 .reset_index(level=0) \
                                 .rename({'level_0':'soil#'},axis=1).reset_index(drop=True)
             results_df = pd.concat([test_df, vwc_.iloc[:,1:]],axis=1)
+            ## empty dataframe for rosetta results
+            rosetta_vwc_df = pd.DataFrame()
 
         st.markdown('**Results for your data**')
         st.write(results_df) 
