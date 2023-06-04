@@ -1,5 +1,4 @@
 from utils import *
-rosetta_vwc_df = pd.DataFrame()
 
 st.title('Pseudo-continuous Pedotransfer Functions for estimating Soil Water Retention Curve (SWRC)')
 with st.sidebar:
@@ -39,6 +38,8 @@ if uploaded_file is not None:
 ## MODEL FITTING
     st.header('Fit the Model')
     model = st. selectbox('Select model', choices)
+    
+    rosetta_vwc_df = pd.DataFrame()
 
     if model == 'model1':
         st.info(f'{model} uses soil texture(SSC), bulk density(BD), and soil organic matter (omc) as inputs')
