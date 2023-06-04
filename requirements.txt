@@ -4,5 +4,5 @@ pandas==2.0.2
 rosetta-soil==0.1.1
 scikit-learn==1.1.1
 seaborn==0.12.2
-streamlit==1.23.1
+streamlit==1.15.1
 tensorflow==2.9.1
