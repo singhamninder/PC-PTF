@@ -65,7 +65,7 @@ def van_genuchten(h, parms):
     vwc = theta_r + numt/Se
     return vwc
 
-def plot_results(results_df):
+def plot_results(results_df:pd.DataFrame, rosetta_vwc_df:pd.DataFrame):
     """
     Plot the results of soil tests.
 
