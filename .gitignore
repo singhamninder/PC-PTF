@@ -1,8 +1,7 @@
 __pycache__/
 project/
-*.ipynb
+# *.ipynb
 *.xlsx
-data.csv
 history_1.pkl
 history_2.pkl
 history_3.pkl
