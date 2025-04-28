@@ -1,6 +1,8 @@
 __pycache__/
+*.ipynb_checkpoints
+*.DS_Store
 project/
-# *.ipynb
+PCnnPTF_original.ipynb
 *.xlsx
 history_1.pkl
 history_2.pkl
