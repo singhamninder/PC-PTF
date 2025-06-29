@@ -18,6 +18,16 @@ with st.sidebar:
         "and Organic Matter Content [%]"
     )
 
+    st.subheader("Citation")
+    st.markdown(
+        """
+        If you use this application, please cite the original paper:
+
+        >Singh, A., Verdi, A., 2024. Estimating the soil water retention curve by the HYPROP-WP4C system, HYPROP-based PCNN-PTF and inverse modeling using HYDRUS-1D. *Journal of Hydrology* 639, 131657. [https://doi.org/10.1016/j.jhydrol.2024.131657](https://doi.org/10.1016/j.jhydrol.2024.131657)
+        """
+    )
+
+
 st.subheader("Dataset")
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
