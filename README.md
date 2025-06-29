@@ -20,6 +20,12 @@ The application allows users to upload their own soil data and receive detailed 
 -   **Interactive Visualization**: Plot the predicted SWRC for any random soil sample from your dataset.
 -   **Downloadable Results**: Export the complete prediction results to a CSV file for further analysis.
 
+## Citation
+
+If you use this application, please cite the original paper:
+
+>Singh, A., Verdi, A., 2024. Estimating the soil water retention curve by the HYPROP-WP4C system, HYPROP-based PCNN-PTF and inverse modeling using HYDRUS-1D. *Journal of Hydrology* 639, 131657. [https://doi.org/10.1016/j.jhydrol.2024.131657](https://doi.org/10.1016/j.jhydrol.2024.131657)
+
 ## How to Use the Web App
 
 1.  **Prepare Your Data**: Create a CSV file with your soil sample data.
